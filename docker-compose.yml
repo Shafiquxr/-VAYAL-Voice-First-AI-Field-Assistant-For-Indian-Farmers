@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  vayal-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    depends_on:
+      - vayal-api
+
+  vayal-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://vayal_admin:vayal_secure_2026@postgres:5432/vayal_db
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: vayal_admin
+      POSTGRES_PASSWORD: vayal_secure_2026
+      POSTGRES_DB: vayal_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
