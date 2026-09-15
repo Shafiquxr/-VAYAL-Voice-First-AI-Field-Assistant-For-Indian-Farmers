@@ -24,6 +24,7 @@ interface AppContextType {
   weather: WeatherData;
   soil: SoilHealth;
   cropDisease: CropDiseaseResult;
+  setCropDisease: (disease: CropDiseaseResult) => void;
   history: FieldObservationItem[];
   addHistoryItem: (item: Omit<FieldObservationItem, 'id' | 'date'>) => void;
   
@@ -301,6 +302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         weather,
         soil,
         cropDisease,
+        setCropDisease,
         history,
         addHistoryItem,
         voiceState,

@@ -5,6 +5,7 @@ from app.db.database import engine, Base, SessionLocal
 from app.services.seed_data import seed_database
 from app.api.routes_fields import router as fields_router
 from app.api.routes_voice import router as voice_router
+from app.api.routes_crop_doctor import router as crop_doctor_router
 
 # Initialize database schemas
 Base.metadata.create_all(bind=engine)
@@ -33,6 +34,7 @@ app.add_middleware(
 
 app.include_router(fields_router)
 app.include_router(voice_router)
+app.include_router(crop_doctor_router)
 
 @app.get("/")
 def root():

@@ -95,14 +95,31 @@ export interface CropDiseaseResult {
   diseaseTamil: string;
   scientificName: string;
   confidencePct: number;
-  severity: 'Mild' | 'Moderate' | 'Severe';
+  confidenceScore?: number;
+  severity: 'Mild' | 'Moderate' | 'Severe' | string;
+  category?: string;
+  isHealthy?: boolean;
   imageUrl: string;
   symptomsEn: string[];
   symptomsTa: string[];
   actionItemsEn: string[];
   actionItemsTa: string[];
+  chemicalTreatmentTa?: string;
+  chemicalTreatmentEn?: string;
+  organicTreatmentTa?: string;
+  organicTreatmentEn?: string;
+  fertilizerAdviceTa?: string;
+  fertilizerAdviceEn?: string;
   audioScriptTa: string;
   audioScriptEn: string;
+  modelSource?: string;
+  topPredictions?: Array<{
+    class_id: string;
+    name_ta: string;
+    name_en: string;
+    confidence: number;
+    confidence_pct: string;
+  }>;
 }
 
 export interface FieldObservationItem {

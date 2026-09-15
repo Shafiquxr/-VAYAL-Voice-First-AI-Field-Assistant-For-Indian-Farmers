@@ -83,6 +83,12 @@ function AskAssistantContent() {
       };
       if (topicMap[topicQuery]) {
         handleSendMessage(language === 'ta' ? topicMap[topicQuery].ta : topicMap[topicQuery].en);
+      } else {
+        handleSendMessage(
+          language === 'ta'
+            ? `${topicQuery} நோய் தடுப்பு மற்றும் மேலாண்மை வழிமுறைகள் என்ன?`
+            : `What are the management and treatment steps for ${topicQuery}?`
+        );
       }
     }
   }, [initialQuery, topicQuery]);
