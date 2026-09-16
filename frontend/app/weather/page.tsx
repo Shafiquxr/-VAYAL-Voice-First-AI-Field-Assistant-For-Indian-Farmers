@@ -18,14 +18,15 @@ import { AudioPlayerButton } from '@/components/AudioPlayerButton';
 import { useApp } from '@/lib/AppContext';
 
 export default function WeatherPage() {
-  const { language, weather, decision, speakText } = useApp();
+  const { language, weather, decision, speakText, detectLiveLocation, isDetectingLocation } = useApp();
 
-  const speechTa = 'தஞ்சாவூரில் இன்று வெப்பநிலை 28 டிகிரி செல்சியஸ். அடுத்த 24 முதல் 48 மணி நேரத்தில் மழை வர 75% வாய்ப்புள்ளது. எனவே இன்று பாசனம் செய்யாமல் காத்திருக்கவும்.';
-  const speechEn = 'In Thanjavur, today temperature is 28 degrees Celsius with 75% rain chance in the next 24 to 48 hours. Irrigation should be postponed.';
+  const loc = weather.locationTamil || weather.location || 'உங்கள் பகுதியில்';
+  const speechTa = `${loc}-ல் இன்று வெப்பநிலை ${weather.temperatureC} டிகிரி செல்சியஸ். வானிலை ${weather.conditionTamil}. அடுத்த 24 முதல் 48 மணி நேரத்தில் மழை பெய்ய ${weather.rainProbabilityPct}% வாய்ப்புள்ளது.`;
+  const speechEn = `In ${weather.location}, today's temperature is ${weather.temperatureC}°C (${weather.condition}). Rain probability is ${weather.rainProbabilityPct}% in the next 24 to 48 hours.`;
 
   useEffect(() => {
     speakText(language === 'ta' ? speechTa : speechEn);
-  }, []);
+  }, [weather.location, weather.temperatureC]);
 
   const getWeatherIcon = (cond: string) => {
     const c = cond.toLowerCase();
@@ -52,7 +53,13 @@ export default function WeatherPage() {
           <h1 className="text-xl font-extrabold text-vayal-forest">
             {language === 'ta' ? 'வானிலை முன்னறிவிப்பு' : 'Weather Forecast'}
           </h1>
-          <span className="w-10"></span>
+          <button
+            onClick={() => detectLiveLocation(true)}
+            className="w-10 h-10 rounded-full bg-vayal-cream-card flex items-center justify-center text-vayal-forest shadow-2xs hover:bg-vayal-cream-hover transition-colors"
+            title={language === 'ta' ? 'GPS இருப்பிடத்தை புதுப்பிக்க' : 'Refresh GPS Location'}
+          >
+            <MapPin className={`w-5 h-5 text-vayal-green ${isDetectingLocation ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         {/* 2-Column Responsive Grid on Desktop */}
@@ -63,10 +70,18 @@ export default function WeatherPage() {
             
             <div className="bg-vayal-cream-card rounded-3xl p-6 sm:p-7 border border-vayal-forest/10 shadow-sm text-center space-y-4">
               {/* Location Chip */}
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-vayal-forest/5 text-vayal-forest text-xs font-bold">
-                <MapPin className="w-4 h-4 text-vayal-green" />
-                <span>{language === 'ta' ? 'தஞ்சாவூர், தமிழ்நாடு' : weather.location}</span>
-              </div>
+              <button
+                onClick={() => detectLiveLocation(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-vayal-forest/5 hover:bg-vayal-forest/10 text-vayal-forest text-xs font-bold transition-colors cursor-pointer group"
+                title={language === 'ta' ? 'நேரடி GPS இருப்பிடத்தை புதுப்பிக்கவும்' : 'Click to refresh GPS'}
+              >
+                <MapPin className="w-4 h-4 text-vayal-green group-hover:scale-110 transition-transform" />
+                <span className="font-tamil">
+                  {isDetectingLocation
+                    ? (language === 'ta' ? 'GPS கண்டறியப்படுகிறது...' : 'Detecting GPS...')
+                    : (language === 'ta' ? (weather.locationTamil || weather.location) : weather.location)}
+                </span>
+              </button>
 
               <div className="flex items-center justify-center gap-4 my-2">
                 <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">

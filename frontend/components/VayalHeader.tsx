@@ -3,12 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, User, Volume2, Globe, Home, Sprout, Layers, CloudSun, MessageSquare, History } from 'lucide-react';
+import { Bell, User, Volume2, Globe, Home, Sprout, Layers, CloudSun, MessageSquare, History, MapPin, Loader2 } from 'lucide-react';
 import { useApp } from '@/lib/AppContext';
 
 export const VayalHeader: React.FC = () => {
   const pathname = usePathname();
-  const { language, setLanguage, user, isSpeaking, stopSpeaking } = useApp();
+  const { language, setLanguage, user, isSpeaking, stopSpeaking, weather, detectLiveLocation, isDetectingLocation } = useApp();
 
   const toggleLanguage = () => {
     setLanguage(language === 'ta' ? 'en' : 'ta');
@@ -27,7 +27,7 @@ export const VayalHeader: React.FC = () => {
     <header className="sticky top-0 z-30 bg-vayal-cream/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3.5 border-b border-vayal-border shadow-xs">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
         
-        {/* Left: Farmer Profile & Greeting */}
+        {/* Left: Farmer Profile & Greeting & GPS Location */}
         <div className="flex items-center gap-3.5">
           <Link href="/profile" className="relative group">
             <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-vayal-forest-2 p-0.5 shadow-sm border border-vayal-green/30 flex items-center justify-center text-vayal-cream font-bold text-sm">
@@ -39,12 +39,25 @@ export const VayalHeader: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-lg font-black text-vayal-forest tracking-tight">VAYAL</span>
               <span className="text-vayal-forest/40 font-bold">•</span>
-              <h1 className="text-vayal-forest font-bold text-sm sm:text-base leading-tight">
-                {language === 'ta' ? 'வணக்கம்!' : 'Vanakkam!'} 👋
-              </h1>
+              <button
+                onClick={() => detectLiveLocation(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-vayal-cream-card border border-vayal-forest/15 hover:border-vayal-green text-[11px] font-bold text-vayal-forest transition-all shadow-2xs group"
+                title={language === 'ta' ? 'நேரடி GPS இருப்பிடத்தை புதுப்பிக்க அழுத்தவும்' : 'Click to refresh live GPS location'}
+              >
+                {isDetectingLocation ? (
+                  <Loader2 className="w-3 h-3 text-vayal-green animate-spin" />
+                ) : (
+                  <MapPin className="w-3 h-3 text-vayal-green group-hover:scale-110 transition-transform" />
+                )}
+                <span className="truncate max-w-[130px] sm:max-w-[200px] font-tamil">
+                  {isDetectingLocation
+                    ? (language === 'ta' ? 'GPS கண்டறிகிறது...' : 'Detecting GPS...')
+                    : (weather.location || 'Live Field GPS')}
+                </span>
+              </button>
             </div>
-            <p className="text-vayal-muted text-xs sm:text-sm font-medium font-tamil">
-              {language === 'ta' ? 'இன்று உங்கள் வயலுக்கு என்ன உதவி வேண்டும்?' : 'How can I help your field today?'}
+            <p className="text-vayal-muted text-xs sm:text-sm font-medium font-tamil mt-0.5">
+              {language === 'ta' ? 'வணக்கம்! இன்று உங்கள் வயலுக்கு என்ன உதவி வேண்டும்?' : 'Vanakkam! How can I help your field today?'}
             </p>
           </div>
         </div>

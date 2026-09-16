@@ -45,6 +45,10 @@ interface AppContextType {
   stopVoiceSession: () => void;
   beginListeningDirectly: () => void;
   finishRecordingAndSubmit: () => Promise<void>;
+  coords: { latitude: number; longitude: number } | null;
+  isDetectingLocation: boolean;
+  locationError: string | null;
+  detectLiveLocation: (forcePrompt?: boolean) => Promise<void>;
   submitVoiceQuery: (queryText: string) => Promise<void>;
   speakText: (text: string, langOverride?: Language) => Promise<void>;
   stopSpeaking: () => void;
@@ -66,6 +70,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [history, setHistory] = useState<FieldObservationItem[]>(SEED_HISTORY);
   const [lastScannedImage, setLastScannedImage] = useState<string | null>(null);
 
+  // GPS Location State
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [micAudioLevel, setMicAudioLevel] = useState<number>(0);
@@ -74,27 +83,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [stopRecognitionFn, setStopRecognitionFn] = useState<(() => void) | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    VoiceAssistant.init();
+  const reverseGeocode = async (lat: number, lon: number): Promise<{ en: string; ta: string; district: string; village: string }> => {
+    try {
+      const res = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+        { signal: AbortSignal.timeout(4000) }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const city = data.city || data.locality || data.principalSubdivision || 'Tamil Nadu';
+        const district = data.locality || data.city || 'Tamil Nadu';
+        const state = data.principalSubdivision || 'Tamil Nadu';
+        const village = data.localityInfo?.administrative?.[3]?.name || data.locality || city;
+        const enName = `${city}, ${state}`;
+        const taName = `${city}, ${state}`;
+        return { en: enName, ta: taName, district, village };
+      }
+    } catch (e) {
+      try {
+        const nomRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`,
+          { headers: { 'User-Agent': 'VAYAL-Field-App/1.0' }, signal: AbortSignal.timeout(4000) }
+        );
+        if (nomRes.ok) {
+          const nomData = await nomRes.json();
+          const addr = nomData.address || {};
+          const city = addr.city || addr.town || addr.county || addr.state_district || 'Tamil Nadu';
+          const state = addr.state || 'Tamil Nadu';
+          return { en: `${city}, ${state}`, ta: `${city}, ${state}`, district: city, village: addr.village || city };
+        }
+      } catch (nomErr) {}
+    }
 
-    // Fetch live Open-Meteo agro-meteorological & soil data
-    fetch('/api/weather?lat=10.7870&lon=79.1378&location=Thanjavur, Tamil Nadu')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return;
+    return {
+      en: `${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`,
+      ta: `${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`,
+      district: 'Live GPS Field',
+      village: 'Field Coordinates',
+    };
+  };
+
+  const fetchWeatherDataForLocation = async (lat: number, lon: number, locationName: string, locationTamil?: string) => {
+    try {
+      const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&location=${encodeURIComponent(locationName)}`);
+      if (res.ok) {
+        const data = await res.json();
         if (data.temperatureC !== undefined) {
-          setWeather((prev) => ({
-            ...prev,
+          setWeather({
+            location: locationName,
+            locationTamil: locationTamil || locationName,
+            latitude: lat,
+            longitude: lon,
+            isGpsLocated: true,
             temperatureC: data.temperatureC,
-            condition: data.condition || prev.condition,
-            conditionTamil: data.conditionTamil || prev.conditionTamil,
-            summaryTa: data.summaryTa || prev.summaryTa,
-            humidityPct: data.humidityPct || prev.humidityPct,
-            windKmh: data.windKmh || prev.windKmh,
-            rainfallMm: data.rainfallMm || prev.rainfallMm,
-            rainProbabilityPct: data.rainProbabilityPct || prev.rainProbabilityPct,
-            forecast: data.forecast && data.forecast.length > 0 ? data.forecast : prev.forecast,
-          }));
+            condition: data.condition || 'Partly Cloudy',
+            conditionTamil: data.conditionTamil || 'பகுதி மேகமூட்டம்',
+            summaryTa: data.summaryTa || '',
+            humidityPct: data.humidityPct || 72,
+            windKmh: data.windKmh || 12,
+            rainfallMm: data.rainfallMm || 0,
+            rainProbabilityPct: data.rainProbabilityPct || 50,
+            forecast: data.forecast || [],
+          });
         }
 
         if (data.decision) {
@@ -116,10 +166,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             },
           }));
         }
-      })
-      .catch((err) => {
-        console.warn('Live weather hydration error:', err);
-      });
+      }
+    } catch (e) {
+      console.warn('Weather fetch error:', e);
+    }
+  };
+
+  const detectLiveLocation = async (forcePrompt: boolean = true) => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      fetchWeatherDataForLocation(10.7870, 79.1378, 'Thanjavur, Tamil Nadu', 'தஞ்சாவூர், தமிழ்நாடு');
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        setCoords({ latitude: lat, longitude: lon });
+
+        const geo = await reverseGeocode(lat, lon);
+
+        setUser((prev) => ({
+          ...prev,
+          district: geo.district,
+          village: geo.village,
+        }));
+
+        setField((prev) => ({
+          ...prev,
+          location: geo.en,
+        }));
+
+        await fetchWeatherDataForLocation(lat, lon, geo.en, geo.ta);
+        setIsDetectingLocation(false);
+      },
+      (err) => {
+        console.warn('Geolocation error / permission:', err);
+        setLocationError(err.message || 'Unable to retrieve GPS location.');
+        setIsDetectingLocation(false);
+        fetchWeatherDataForLocation(10.7870, 79.1378, 'Thanjavur, Tamil Nadu', 'தஞ்சாவூர், தமிழ்நாடு');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  };
+
+  useEffect(() => {
+    VoiceAssistant.init();
+    // Auto-detect live GPS location on app mount to get real weather and soil conditions
+    detectLiveLocation(false);
   }, []);
 
   const isListening = voiceState === 'listening';
@@ -365,6 +467,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCropDisease,
         history,
         addHistoryItem,
+        coords,
+        isDetectingLocation,
+        locationError,
+        detectLiveLocation,
         voiceState,
         setVoiceState,
         isListening,

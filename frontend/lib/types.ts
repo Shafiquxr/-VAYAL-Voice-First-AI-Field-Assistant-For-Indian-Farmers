@@ -54,6 +54,10 @@ export interface DecisionTwin {
 
 export interface WeatherData {
   location: string;
+  locationTamil?: string;
+  latitude?: number;
+  longitude?: number;
+  isGpsLocated?: boolean;
   temperatureC: number;
   condition: string;
   conditionTamil: string;
