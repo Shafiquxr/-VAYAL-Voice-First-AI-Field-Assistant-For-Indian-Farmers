@@ -33,6 +33,10 @@ interface AppContextType {
   setVoiceState: (state: VoiceState) => void;
   isListening: boolean;
   isSpeaking: boolean;
+  isVoiceModalOpen: boolean;
+  setIsVoiceModalOpen: (open: boolean) => void;
+  openVoiceModal: () => void;
+  closeVoiceModal: () => void;
   voiceTranscript: string;
   micAudioLevel: number;
   micError: string | null;
@@ -288,7 +292,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStopRecognitionFn(() => stop);
   };
 
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  const openVoiceModal = () => {
+    setIsVoiceModalOpen(true);
+  };
+
+  const closeVoiceModal = () => {
+    setIsVoiceModalOpen(false);
+  };
+
   const startVoiceSession = () => {
+    setIsVoiceModalOpen(true);
     VoiceAssistant.stopSpeaking();
     setLastVoiceResponse(null);
     setVoiceTranscript('');
@@ -311,6 +326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const stopVoiceSession = () => {
+    setIsVoiceModalOpen(false);
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
@@ -353,6 +369,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setVoiceState,
         isListening,
         isSpeaking,
+        isVoiceModalOpen,
+        setIsVoiceModalOpen,
+        openVoiceModal,
+        closeVoiceModal,
         voiceTranscript,
         micAudioLevel,
         micError,

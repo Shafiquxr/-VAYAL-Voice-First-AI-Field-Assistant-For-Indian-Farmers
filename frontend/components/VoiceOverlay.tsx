@@ -2,13 +2,32 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, X, Send, Sparkles, Volume2, Sprout, Loader2, ArrowRight, Check, Square } from 'lucide-react';
+import {
+  Mic,
+  MicOff,
+  X,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  Sprout,
+  Loader2,
+  ArrowRight,
+  Check,
+  Maximize2,
+  Minimize2,
+  MessageSquare,
+} from 'lucide-react';
 import { useApp } from '@/lib/AppContext';
 
 export const VoiceOverlay: React.FC = () => {
   const router = useRouter();
   const {
     voiceState,
+    isSpeaking,
+    isListening,
+    isVoiceModalOpen,
+    openVoiceModal,
+    closeVoiceModal,
     stopVoiceSession,
     startVoiceSession,
     beginListeningDirectly,
@@ -19,6 +38,7 @@ export const VoiceOverlay: React.FC = () => {
     lastVoiceResponse,
     language,
     speakText,
+    stopSpeaking,
   } = useApp();
 
   const [manualQuery, setManualQuery] = useState('');
@@ -28,8 +48,6 @@ export const VoiceOverlay: React.FC = () => {
       setManualQuery(voiceTranscript);
     }
   }, [voiceTranscript]);
-
-  if (voiceState === 'idle') return null;
 
   const handleSend = () => {
     if (manualQuery.trim()) {
@@ -53,6 +71,90 @@ export const VoiceOverlay: React.FC = () => {
     'Today paddy market rate',
   ];
 
+  const audioBars = [
+    Math.min(100, Math.max(20, micAudioLevel * 1.4)),
+    Math.min(100, Math.max(30, micAudioLevel * 2.0)),
+    Math.min(100, Math.max(45, micAudioLevel * 2.4)),
+    Math.min(100, Math.max(25, micAudioLevel * 1.8)),
+    Math.min(100, Math.max(15, micAudioLevel * 1.2)),
+  ];
+
+  // ----------------------------------------------------------------------------------
+  // MODE 1: Ambient Floating Voice Pill / Dock (When Modal is NOT Open)
+  // Keeps voice assistance always active without covering the user's screen!
+  // ----------------------------------------------------------------------------------
+  if (!isVoiceModalOpen) {
+    return (
+      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        {/* Speaking Ambient Pill */}
+        {isSpeaking && (
+          <div className="flex items-center gap-2.5 bg-vayal-forest/95 text-vayal-cream backdrop-blur-md px-4 py-2.5 rounded-full border-2 border-vayal-yellow/50 shadow-2xl">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-vayal-yellow animate-ping"></span>
+              <Volume2 className="w-4 h-4 text-vayal-yellow animate-bounce" />
+            </div>
+            <span className="text-xs font-bold font-tamil max-w-[140px] sm:max-w-[200px] truncate">
+              {language === 'ta' ? 'குரல் வழிகாட்டல் ஒலிக்கிறது...' : 'VAYAL Voice Speaking...'}
+            </span>
+
+            {/* Stop Audio Button */}
+            <button
+              onClick={stopSpeaking}
+              className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+              title={language === 'ta' ? 'ஒலியை நிறுத்து' : 'Stop Audio'}
+            >
+              <VolumeX className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Expand Modal Button */}
+            <button
+              onClick={openVoiceModal}
+              className="w-6 h-6 rounded-full bg-vayal-yellow text-vayal-forest hover:bg-yellow-400 flex items-center justify-center transition-transform active:scale-95 shadow-sm"
+              title={language === 'ta' ? 'உதவியாளரை திறக்க' : 'Open Assistant'}
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Listening Ambient Pill */}
+        {isListening && !isSpeaking && (
+          <div className="flex items-center gap-2.5 bg-vayal-forest/95 text-vayal-cream backdrop-blur-md px-4 py-2.5 rounded-full border-2 border-vayal-green shadow-2xl animate-pulse">
+            <Mic className="w-4 h-4 text-vayal-yellow animate-bounce" />
+            <span className="text-xs font-bold font-tamil">
+              {language === 'ta' ? 'குரலை கேட்கிறேன்...' : 'Listening...'}
+            </span>
+            <button
+              onClick={openVoiceModal}
+              className="text-[11px] font-bold underline text-vayal-yellow"
+            >
+              {language === 'ta' ? 'திறக்க' : 'Open'}
+            </button>
+          </div>
+        )}
+
+        {/* Floating Quick Mic Trigger Button (Always Accessible in Corner) */}
+        {!isSpeaking && !isListening && (
+          <button
+            onClick={startVoiceSession}
+            className="group flex items-center gap-2 bg-vayal-forest hover:bg-vayal-forest-2 text-vayal-cream px-4 py-3 rounded-full border-2 border-vayal-yellow/40 shadow-xl transition-all transform hover:scale-105 active:scale-95"
+            title={language === 'ta' ? 'குரல் வழி பேசவும்' : 'Speak to VAYAL Voice Assistant'}
+          >
+            <div className="w-6 h-6 rounded-full bg-vayal-yellow/20 flex items-center justify-center text-vayal-yellow group-hover:scale-110 transition-transform">
+              <Mic className="w-4 h-4 text-vayal-yellow" />
+            </div>
+            <span className="text-xs font-extrabold tracking-wide font-tamil hidden sm:inline">
+              {language === 'ta' ? 'குரல் AI' : 'Voice AI'}
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------------------------
+  // MODE 2: Explicit Interactive Modal Dialog (Only when User requests it!)
+  // ----------------------------------------------------------------------------------
   const getStatusBadge = () => {
     switch (voiceState) {
       case 'listening':
@@ -88,26 +190,27 @@ export const VoiceOverlay: React.FC = () => {
 
   const status = getStatusBadge();
 
-  const audioBars = [
-    Math.min(100, Math.max(20, micAudioLevel * 1.4)),
-    Math.min(100, Math.max(30, micAudioLevel * 2.0)),
-    Math.min(100, Math.max(45, micAudioLevel * 2.4)),
-    Math.min(100, Math.max(25, micAudioLevel * 1.8)),
-    Math.min(100, Math.max(15, micAudioLevel * 1.2)),
-  ];
-
   return (
-    <div className="fixed inset-0 z-50 bg-vayal-forest/90 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-4 transition-all animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-vayal-cream rounded-3xl p-5 sm:p-7 shadow-2xl border border-vayal-green/30 relative flex flex-col items-center text-center max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center p-4 transition-all animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-vayal-cream rounded-3xl p-5 sm:p-7 shadow-2xl border-2 border-vayal-forest/15 relative flex flex-col items-center text-center max-h-[90vh] overflow-y-auto">
         
-        {/* Close Button */}
-        <button
-          onClick={stopVoiceSession}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-vayal-forest/10 hover:bg-vayal-forest/20 flex items-center justify-center text-vayal-forest transition-colors shadow-2xs"
-          aria-label="Close"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Header Controls: Minimize & Close */}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5">
+          <button
+            onClick={closeVoiceModal}
+            className="w-9 h-9 rounded-full bg-vayal-forest/10 hover:bg-vayal-forest/20 flex items-center justify-center text-vayal-forest transition-colors shadow-2xs"
+            title={language === 'ta' ? 'குறைக்க (Minimize)' : 'Minimize'}
+          >
+            <Minimize2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={stopVoiceSession}
+            className="w-9 h-9 rounded-full bg-vayal-forest/10 hover:bg-vayal-forest/20 flex items-center justify-center text-vayal-forest transition-colors shadow-2xs"
+            title={language === 'ta' ? 'மூடு' : 'Close'}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
         {/* State Status Badge */}
         <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs sm:text-sm font-extrabold tracking-wide mb-3 shadow-2xs ${status.color}`}>
@@ -207,10 +310,10 @@ export const VoiceOverlay: React.FC = () => {
             {/* Bottom Action Controls */}
             <div className="w-full flex items-center gap-3 mt-4">
               <button
-                onClick={stopVoiceSession}
+                onClick={closeVoiceModal}
                 className="flex-1 py-3.5 px-4 rounded-full border border-vayal-forest/20 text-vayal-forest font-bold text-xs sm:text-sm hover:bg-vayal-forest/5 transition-colors"
               >
-                {language === 'ta' ? 'ரத்து செய்' : 'Cancel'}
+                {language === 'ta' ? 'குறைக்க (Minimize)' : 'Minimize'}
               </button>
               
               <button
@@ -218,7 +321,7 @@ export const VoiceOverlay: React.FC = () => {
                 className="flex-2 py-3.5 px-5 rounded-full bg-vayal-forest hover:bg-vayal-forest-2 text-vayal-cream font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
               >
                 <Check className="w-4 h-4 text-vayal-yellow stroke-[3]" />
-                <span>{language === 'ta' ? 'பேசி முடிந்தது (Done - Ask AI)' : 'Done Speaking (Ask AI)'}</span>
+                <span>{language === 'ta' ? 'பேசி முடிந்தது (Done)' : 'Done Speaking'}</span>
               </button>
             </div>
           </>
@@ -241,7 +344,7 @@ export const VoiceOverlay: React.FC = () => {
                   <span className="text-xs font-extrabold text-vayal-forest">VAYAL AI Response</span>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-vayal-green/15 text-vayal-green">
-                  {lastVoiceResponse.source || 'Ollama AI'}
+                  {lastVoiceResponse.source || 'Open-Meteo & Ollama AI'}
                 </span>
               </div>
 
@@ -265,7 +368,7 @@ export const VoiceOverlay: React.FC = () => {
 
                 <button
                   onClick={() => {
-                    stopVoiceSession();
+                    closeVoiceModal();
                     router.push(`/ask?q=${encodeURIComponent(lastVoiceResponse.query)}`);
                   }}
                   className="text-xs font-bold text-vayal-forest hover:text-vayal-green flex items-center gap-1"
@@ -287,7 +390,7 @@ export const VoiceOverlay: React.FC = () => {
               </button>
 
               <button
-                onClick={stopVoiceSession}
+                onClick={closeVoiceModal}
                 className="py-3 px-4 rounded-full border border-vayal-forest/20 text-vayal-forest font-bold text-xs sm:text-sm hover:bg-vayal-forest/5"
               >
                 {language === 'ta' ? 'முடிந்தது' : 'Done'}
