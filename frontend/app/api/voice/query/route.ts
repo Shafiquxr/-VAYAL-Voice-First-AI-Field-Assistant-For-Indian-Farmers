@@ -33,7 +33,7 @@ export async function POST(req: Request) {
           const models: string[] = tagsData.models?.map((m: any) => m.name) || [];
           if (models.length > 0) {
             const preferred = models.find(m =>
-              m.includes('qwen') || m.includes('llama3') || m.includes('gemma') || m.includes('mistral')
+              m.includes('phi') || m.includes('qwen') || m.includes('llama3') || m.includes('gemma') || m.includes('mistral')
             );
             targetModel = preferred || models[0];
             cachedModel = targetModel;
