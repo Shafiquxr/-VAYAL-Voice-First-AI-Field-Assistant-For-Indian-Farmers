@@ -72,6 +72,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     VoiceAssistant.init();
+
+    // Fetch live Open-Meteo agro-meteorological & soil data
+    fetch('/api/weather?lat=10.7870&lon=79.1378&location=Thanjavur, Tamil Nadu')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        if (data.temperatureC !== undefined) {
+          setWeather((prev) => ({
+            ...prev,
+            temperatureC: data.temperatureC,
+            condition: data.condition || prev.condition,
+            conditionTamil: data.conditionTamil || prev.conditionTamil,
+            summaryTa: data.summaryTa || prev.summaryTa,
+            humidityPct: data.humidityPct || prev.humidityPct,
+            windKmh: data.windKmh || prev.windKmh,
+            rainfallMm: data.rainfallMm || prev.rainfallMm,
+            rainProbabilityPct: data.rainProbabilityPct || prev.rainProbabilityPct,
+            forecast: data.forecast && data.forecast.length > 0 ? data.forecast : prev.forecast,
+          }));
+        }
+
+        if (data.decision) {
+          setDecision((prev) => ({
+            ...prev,
+            decisionType: data.decision.type || prev.decisionType,
+            titleEn: data.decision.titleEn || prev.titleEn,
+            titleTa: data.decision.titleTa || prev.titleTa,
+            actionEn: data.decision.actionEn || prev.actionEn,
+            actionTa: data.decision.actionTa || prev.actionTa,
+            reasonEn: data.decision.reasonEn || prev.reasonEn,
+            reasonTa: data.decision.reasonTa || prev.reasonTa,
+            confidence: data.decision.confidence || prev.confidence,
+            evidence: {
+              ...prev.evidence,
+              soilMoisturePct: data.soil?.overallMoisturePct || prev.evidence.soilMoisturePct,
+              rainProbabilityPct: data.rainProbabilityPct || prev.evidence.rainProbabilityPct,
+              rainfallNext24hMm: data.rainfallNext24hMm || prev.evidence.rainfallNext24hMm,
+            },
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn('Live weather hydration error:', err);
+      });
   }, []);
 
   const isListening = voiceState === 'listening';
