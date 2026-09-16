@@ -84,6 +84,36 @@ export class VoiceAssistant {
     }
   }
 
+  public static normalizePhonetics(text: string, lang: Language = 'ta'): string {
+    let result = text
+      .replace(/[*_#`~]/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      .trim();
+
+    if (lang === 'ta') {
+      result = result
+        .replace(/\bVAYAL\b/gi, 'வயல்')
+        .replace(/\bAI\b/g, 'செயற்கை நுண்ணறிவு')
+        .replace(/\bBPT 5204\b/gi, 'பிபிடி 5204')
+        .replace(/\bpH\b/gi, 'பி எச்')
+        .replace(/\b1g\/L\b/gi, 'ஒரு லிட்டருக்கு ஒரு கிராம்')
+        .replace(/(\d+)\s*kg\b/gi, '$1 கிலோ')
+        .replace(/(\d+)\s*mm\b/gi, '$1 மில்லிமீட்டர்')
+        .replace(/(\d+)\s*°C\b/gi, '$1 டிகிரி செல்சியஸ்')
+        .replace(/(\d+)%/g, '$1 சதவீதம்');
+    } else {
+      result = result
+        .replace(/\bVAYAL\b/g, 'Vayal')
+        .replace(/\bAI\b/g, 'A.I.')
+        .replace(/(\d+)\s*kg\b/gi, '$1 kilograms')
+        .replace(/(\d+)\s*mm\b/gi, '$1 millimeters')
+        .replace(/(\d+)\s*°C\b/gi, '$1 degrees Celsius')
+        .replace(/(\d+)%/g, '$1 percent');
+    }
+
+    return result;
+  }
+
   public static speak(
     text: string,
     lang: Language = 'ta',
@@ -100,10 +130,7 @@ export class VoiceAssistant {
       this.stopSpeaking();
       const currentToken = this.activePlayId;
 
-      const cleanedText = text
-        .replace(/[*_#`~]/g, '')
-        .replace(/https?:\/\/\S+/g, '')
-        .trim();
+      const cleanedText = this.normalizePhonetics(text, lang);
 
       if (!cleanedText) {
         if (onEnd) onEnd();

@@ -13,7 +13,7 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      speakText('வணக்கம்! VAYAL விவசாய உதவியாளருக்கு வரவேற்கிறோம்.', 'ta');
+      speakText('வணக்கம்! வயல் விவசாய உதவியாளருக்கு வரவேற்கிறோம்.', 'ta');
     }, 600);
     return () => clearTimeout(timer);
   }, []);

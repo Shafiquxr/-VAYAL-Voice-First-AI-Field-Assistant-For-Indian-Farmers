@@ -8,6 +8,9 @@ class TamilVoiceNormalizer:
     before sending text to Piper TTS and Ollama.
     """
     PRONUNCIATION_DICT = {
+        "VAYAL": "வயல்",
+        "Vayal": "வயல்",
+        "AI": "செயற்கை நுண்ணறிவு",
         "BPT 5204": "பிபிடி ஐயாயிரத்து இருபத்து நான்கு",
         "BPT5204": "பிபிடி ஐயாயிரத்து இருபத்து நான்கு",
         "NDVI": "என் டி வி ஐ",
